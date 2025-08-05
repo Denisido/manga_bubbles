@@ -3,8 +3,8 @@ window.renderReady = false;
 window.renderBubbles = async function (points) {
   const stage = new Konva.Stage({
     container: 'container',
-    width: 800,
-    height: 600
+    width: 1024,
+    height: 1024
   });
 
   const layer = new Konva.Layer();
@@ -56,67 +56,88 @@ async function createBubbleFromPoint(point) {
   return group;
 }
 
-// Создание пути пузыря с неровностями и плавными кривыми
+// Создание пути пузыря с плавным хвостиком
 function createBubblePath(point) {
   const w = point.width;
   const h = point.height;
   const rX = w / 2;
   const rY = h / 2;
 
-  const segments = 24;
-  const irregularity = point.irregularity ?? 0; // степень неровности
-
+  const segments = 32;
+  const irregularity = point.irregularity ?? 0;
   const points = [];
 
-  // Генерация точек с неровностью
+  // Генерация точек пузыря
   for (let i = 0; i < segments; i++) {
     const angle = (Math.PI * 2 * i) / segments;
     const radiusX = rX * (1 + (Math.random() - 0.5) * irregularity);
     const radiusY = rY * (1 + (Math.random() - 0.5) * irregularity);
     points.push({
       x: Math.cos(angle) * radiusX,
-      y: Math.sin(angle) * radiusY
+      y: Math.sin(angle) * radiusY,
+      angle
     });
   }
 
-  // Формируем путь с кривыми Безье
-  let path = `M ${points[0].x} ${points[0].y}`;
+  // Определяем угол хвостика
+  let tailIndex = null;
+  if (point.hasTail && point.style !== "thought") {
+    const dx = point.anchorX - point.x;
+    const dy = point.anchorY - point.y;
+    const tailAngle = Math.atan2(dy, dx);
+
+    tailIndex = points.reduce((closestIndex, p, idx) => {
+      const diff = Math.abs(normalizeAngle(p.angle - tailAngle));
+      return diff < Math.abs(normalizeAngle(points[closestIndex].angle - tailAngle))
+        ? idx
+        : closestIndex;
+    }, 0);
+  }
+
+  let path = "";
   for (let i = 0; i < points.length; i++) {
     const p0 = points[i];
     const p1 = points[(i + 1) % points.length];
+
+    if (i === 0) {
+      path += `M ${p0.x} ${p0.y}`;
+    }
+
+    // Вставляем хвостик плавными кривыми
+    if (tailIndex !== null && i === tailIndex) {
+      const base = p0;
+      const dx = point.anchorX - point.x;
+      const dy = point.anchorY - point.y;
+      const angle = Math.atan2(dy, dx);
+
+      // Боковые точки у основания хвоста
+      const leftX = base.x + Math.cos(angle + 0.4) * 12;
+      const leftY = base.y + Math.sin(angle + 0.4) * 12;
+      const rightX = base.x + Math.cos(angle - 0.4) * 12;
+      const rightY = base.y + Math.sin(angle - 0.4) * 12;
+
+      // Кончик хвоста
+      const tipX = base.x + Math.cos(angle) * 30;
+      const tipY = base.y + Math.sin(angle) * 30;
+
+      // Плавная левая кривая
+      path += ` Q ${leftX} ${leftY}, ${tipX} ${tipY}`;
+      // Плавная правая кривая
+      path += ` Q ${rightX} ${rightY}, ${base.x} ${base.y}`;
+    }
+
     const midX = (p0.x + p1.x) / 2;
     const midY = (p0.y + p1.y) / 2;
 
     path += ` Q ${p0.x} ${p0.y}, ${midX} ${midY}`;
   }
+
   path += " Z";
-
-  // Хвост (только если есть и не мысль)
-  if (point.hasTail && point.style !== "thought") {
-    const dx = point.anchorX - point.x;
-    const dy = point.anchorY - point.y;
-    const angle = Math.atan2(dy, dx);
-
-    const tailBaseX = Math.cos(angle) * rX;
-    const tailBaseY = Math.sin(angle) * rY;
-
-    const tailTipX = tailBaseX + Math.cos(angle) * 25;
-    const tailTipY = tailBaseY + Math.sin(angle) * 25;
-
-    const leftWingX = tailBaseX + Math.cos(angle + 0.4) * 12;
-    const leftWingY = tailBaseY + Math.sin(angle + 0.4) * 12;
-    const rightWingX = tailBaseX + Math.cos(angle - 0.4) * 12;
-    const rightWingY = tailBaseY + Math.sin(angle - 0.4) * 12;
-
-    path += `
-      M ${leftWingX} ${leftWingY}
-      L ${tailTipX} ${tailTipY}
-      L ${rightWingX} ${rightWingY}
-      Z
-    `;
-  }
-
   return path;
+}
+
+function normalizeAngle(angle) {
+  return ((angle + Math.PI * 2) % (Math.PI * 2));
 }
 
 // Точки для мыслей

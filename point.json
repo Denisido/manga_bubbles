@@ -39,7 +39,7 @@
     "style": "whisper",
     "anchorX": 240,
     "anchorY": 10,
-    "hasTail": false,
+    "hasTail": true,
     "bubbleColor": "#fff",
     "borderColor": "#000",
     "irregularity": 0.15
@@ -51,12 +51,12 @@
     "width": 180,
     "height": 90,
     "text": "Хмм... может быть, это не так уж и плохо...",
-    "style": "thought",
+    "style": "dialog",
     "anchorX": 450,
     "anchorY": 400,
     "hasTail": true,
     "bubbleColor": "#fff",
     "borderColor": "#000",
-    "irregularity": 0
+    "irregularity": 0.5
   }
 ]
