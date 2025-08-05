@@ -1,0 +1,62 @@
+[
+  {
+    "id": "bubble1",
+    "x": 200,
+    "y": 200,
+    "width": 200,
+    "height": 100,
+    "text": "Привет! Как дела?",
+    "style": "dialog",
+    "anchorX": 180,
+    "anchorY": 300,
+    "hasTail": true,
+    "bubbleColor": "#fff",
+    "borderColor": "#000",
+    "irregularity": 0.1
+  },
+  {
+    "id": "bubble2",
+    "x": 400,
+    "y": 150,
+    "width": 120,
+    "height": 120,
+    "text": "ЭЙ! СЮДА СМОТРИ!",
+    "style": "shout",
+    "anchorX": 500,
+    "anchorY": 140,
+    "hasTail": true,
+    "bubbleColor": "#fff",
+    "borderColor": "#000",
+    "irregularity": 0.25
+  },
+  {
+    "id": "bubble3",
+    "x": 250,
+    "y": 80,
+    "width": 160,
+    "height": 80,
+    "text": "Тсс... только между нами!",
+    "style": "whisper",
+    "anchorX": 240,
+    "anchorY": 10,
+    "hasTail": false,
+    "bubbleColor": "#fff",
+    "borderColor": "#000",
+    "irregularity": 0.15
+  },
+  {
+    "id": "bubble4",
+    "x": 350,
+    "y": 300,
+    "width": 180,
+    "height": 90,
+    "text": "Хмм... может быть, это не так уж и плохо...",
+    "style": "thought",
+    "anchorX": 450,
+    "anchorY": 400,
+    "hasTail": true,
+    "bubbleColor": "#fff",
+    "borderColor": "#000",
+    "irregularity": 0
+  }
+]

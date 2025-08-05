@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Рендер текста</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+        }
+        #canvas {
+            position: relative;
+            display: inline-block;
+        }
+        .bubble {
+            position: absolute;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            font-family: Arial, sans-serif;
+            border: 2px solid;
+            border-radius: 10px;
+            padding: 5px;
+            box-sizing: border-box;
+            word-wrap: break-word;
+            overflow: hidden;
+            white-space: pre-wrap;
+            line-height: 1.2;
+        }
+        .marker {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background: rgba(255, 0, 0, 0.6);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 9999;
+        }
+    </style>
+</head>
+<body>
+    <div id="canvas">
+        <img id="background" src="img.png">
+    </div>
+    <script>
+        function wrapTextAdvanced(text, maxWidth, context) {
+            const words = text.split(' ');
+            let lines = [];
+            let currentLine = '';
+
+            const vowelsRu = 'аеёиоуыэюя';
+            const vowelsEn = 'aeiou';
+
+            function isRussian(word) {
+                return /[а-яё]/i.test(word);
+            }
+
+            function splitIntoSyllables(word) {
+                const regex = new RegExp(`[^${vowelsRu}]*[${vowelsRu}]+(?:[^${vowelsRu}]*)`, 'gi');
+                return word.match(regex) || [word];
+            }
+
+            function splitEnglishWord(word) {
+                // сначала пробуем разделить по дефисам
+                if (word.includes('-')) return word.split(/(-)/).filter(Boolean);
+                return [word]; // если дефисов нет — возвращаем как есть
+            }
+
+            function breakLongPart(part) {
+                // если даже часть не влезает в ширину — режем по символам с дефисом
+                let pieces = [];
+                let temp = '';
+                for (let char of part) {
+                    if (context.measureText(temp + char).width <= maxWidth) {
+                        temp += char;
+                    } else {
+                        pieces.push(temp + '-');
+                        temp = char;
+                    }
+                }
+                if (temp) pieces.push(temp);
+                return pieces;
+            }
+
+            function processWord(word) {
+                if (isRussian(word)) {
+                    return splitIntoSyllables(word).flatMap(breakLongPart);
+                } else {
+                    return splitEnglishWord(word).flatMap(breakLongPart);
+                }
+            }
+
+            for (let word of words) {
+                let testLine = currentLine ? currentLine + ' ' + word : word;
+                let width = context.measureText(testLine).width;
+
+                if (width <= maxWidth) {
+                    currentLine = testLine;
+                } else {
+                    if (!currentLine) {
+                        const parts = processWord(word);
+                        for (let i = 0; i < parts.length; i++) {
+                            if (i === 0) lines.push(parts[i]);
+                            else lines.push(parts[i]);
+                        }
+                        currentLine = '';
+                    } else {
+                        lines.push(currentLine);
+                        currentLine = word;
+                    }
+                }
+            }
+
+            if (currentLine) lines.push(currentLine);
+            return lines.join('\n');
+        }
+
+
+        function fitTextToBubble(element, maxFontSize) {
+            let fontSize = maxFontSize;
+            element.style.fontSize = fontSize + 'px';
+            while (element.scrollHeight > element.clientHeight || element.scrollWidth > element.clientWidth) {
+                fontSize--;
+                element.style.fontSize = fontSize + 'px';
+                if (fontSize < 10) break;
+            }
+        }
+
+        window.addBubbles = function(bubbles) {
+            const container = document.getElementById('canvas');
+            const img = document.getElementById('background');
+
+            // Делаем рендер сразу после вставки картинки
+            bubbles.forEach(bubble => {
+                const marker = document.createElement('div');
+                marker.className = 'marker';
+                marker.style.left = bubble.x + 'px';
+                marker.style.top = bubble.y + 'px';
+                container.appendChild(marker);
+
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                ctx.font = "24px Arial";
+
+                const wrappedText = wrapTextAdvanced(bubble.text, bubble.width - 10, ctx);
+
+                const el = document.createElement('div');
+                el.className = 'bubble';
+                el.innerText = wrappedText;
+                el.style.left = (bubble.x - bubble.width / 2) + 'px';
+                el.style.top = (bubble.y - bubble.height / 2) + 'px';
+                el.style.width = bubble.width + 'px';
+                el.style.height = bubble.height + 'px';
+                el.style.background = bubble.bubbleColor;
+                el.style.borderColor = bubble.borderColor;
+
+                container.appendChild(el);
+                fitTextToBubble(el, 24);
+            });
+
+            window.renderReady = true;
+        };
+
+    </script>
+</body>
+</html>

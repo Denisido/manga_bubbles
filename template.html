@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Манга-пузыри на Konva.js</title>
+  <style>
+    body { margin: 0; padding: 0; }
+    #container { position: relative; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/konva@9/konva.min.js"></script>
+</head>
+<body>
+  <div id="container"></div>
+
+  <script>
+    const stage = new Konva.Stage({
+      container: 'container',
+      width: window.innerWidth,
+      height: window.innerHeight
+    });
+
+    const layer = new Konva.Layer();
+    stage.add(layer);
+
+    function createMangaBubble(bubble) {
+      const { x, y, width, height, text, bubbleColor = '#fff', borderColor = '#000', style = 'dialog', tailDirection = 'bottom' } = bubble;
+      const radiusX = width / 2;
+      const radiusY = height / 2;
+      const tailLength = 50;
+      const tailWidth = 30;
+      const curvature = 0.6;
+
+      const bubbleEllipse = new Konva.Ellipse({
+        x, y, radiusX, radiusY,
+        fill: bubbleColor,
+        stroke: borderColor,
+        strokeWidth: 2,
+        dash: style === 'whisper' ? [5, 5] : []
+      });
+      layer.add(bubbleEllipse);
+
+      if (style !== 'thought') {
+        const tailPoints = getTailPoints(x, y, radiusX, radiusY, tailLength, tailWidth, curvature, tailDirection);
+        const tail = new Konva.Line({
+          points: tailPoints,
+          fill: bubbleColor,
+          stroke: borderColor,
+          strokeWidth: 2,
+          closed: true,
+          dash: style === 'whisper' ? [5, 5] : []
+        });
+        layer.add(tail);
+      } else {
+        drawThoughtTail(x, y + radiusY, tailLength);
+      }
+
+      addSmartText(x, y, width - 20, height - 20, text);
+    }
+
+    function getTailPoints(cx, cy, radiusX, radiusY, length, width, curvature, direction) {
+      let base1, base2, tip;
+      switch (direction) {
+        case 'bottom':
+          base1 = [cx - width / 2, cy + radiusY];
+          base2 = [cx + width / 2, cy + radiusY];
+          tip = [cx, cy + radiusY + length];
+          break;
+        case 'top':
+          base1 = [cx - width / 2, cy - radiusY];
+          base2 = [cx + width / 2, cy - radiusY];
+          tip = [cx, cy - radiusY - length];
+          break;
+        case 'left':
+          base1 = [cx - radiusX, cy - width / 2];
+          base2 = [cx - radiusX, cy + width / 2];
+          tip = [cx - radiusX - length, cy];
+          break;
+        case 'right':
+          base1 = [cx + radiusX, cy - width / 2];
+          base2 = [cx + radiusX, cy + width / 2];
+          tip = [cx + radiusX + length, cy];
+          break;
+      }
+      return [...base1, ...tip, ...base2];
+    }
+
+    function drawThoughtTail(startX, startY, length) {
+      const bubbles = 3;
+      for (let i = 1; i <= bubbles; i++) {
+        const r = 4 + (bubbles - i) * 2;
+        const circle = new Konva.Circle({
+          x: startX + i * 12,
+          y: startY + i * 12,
+          radius: r,
+          fill: '#fff',
+          stroke: '#000',
+          strokeWidth: 2
+        });
+        layer.add(circle);
+      }
+    }
+
+    function addSmartText(x, y, maxWidth, maxHeight, content) {
+      let fontSize = 22;
+      const lineHeight = 1.2;
+      const tempText = new Konva.Text({ text: '', fontSize, visible: false });
+      layer.add(tempText);
+
+      let lines;
+      do {
+        tempText.fontSize(fontSize);
+        lines = wrapText(content, maxWidth, fontSize, tempText);
+        if (lines.length * fontSize * lineHeight > maxHeight) fontSize--;
+        else break;
+      } while (fontSize > 10);
+
+      tempText.destroy();
+
+      const textNode = new Konva.Text({
+        x, y,
+        fontSize,
+        align: 'center',
+        verticalAlign: 'middle',
+        text: lines.join('\n')
+      });
+
+      textNode.offsetX(textNode.width() / 2);
+      textNode.offsetY(textNode.height() / 2);
+      layer.add(textNode);
+    }
+
+    function wrapText(text, maxWidth, fontSize, tempText) {
+      const words = text.split(/(\s+|-)/);
+      const lines = [];
+      let line = '';
+      words.forEach(word => {
+        const testLine = line + word;
+        tempText.text(testLine);
+        if (tempText.width() > maxWidth && line.trim() !== '') {
+          lines.push(line.trim());
+          line = word.trim();
+        } else {
+          line = testLine;
+        }
+      });
+      if (line.trim()) lines.push(line.trim());
+      return lines;
+    }
+
+    // Функция для Puppeteer
+    window.addBubbles = function (bubbles) {
+      layer.destroyChildren();
+      bubbles.forEach(createMangaBubble);
+      layer.draw();
+      window.renderReady = true;
+    };
+  </script>
+</body>
+</html>
