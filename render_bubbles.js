@@ -110,21 +110,25 @@ function createBubblePath(point) {
       const dy = point.anchorY - point.y;
       const angle = Math.atan2(dy, dx);
 
-      // Боковые точки у основания хвоста
-      const leftX = base.x + Math.cos(angle + 0.4) * 12;
-      const leftY = base.y + Math.sin(angle + 0.4) * 12;
-      const rightX = base.x + Math.cos(angle - 0.4) * 12;
-      const rightY = base.y + Math.sin(angle - 0.4) * 12;
+      // Шире основание хвоста
+      const spread = 0.6; // угол расширения
+      const length = 20;  // длина хвоста
 
-      // Кончик хвоста
-      const tipX = base.x + Math.cos(angle) * 30;
-      const tipY = base.y + Math.sin(angle) * 30;
+      const leftX = base.x + Math.cos(angle + spread) * 14;
+      const leftY = base.y + Math.sin(angle + spread) * 14;
+      const rightX = base.x + Math.cos(angle - spread) * 14;
+      const rightY = base.y + Math.sin(angle - spread) * 14;
+
+      // Более короткий кончик хвоста
+      const tipX = base.x + Math.cos(angle) * length;
+      const tipY = base.y + Math.sin(angle) * length;
 
       // Плавная левая кривая
       path += ` Q ${leftX} ${leftY}, ${tipX} ${tipY}`;
       // Плавная правая кривая
       path += ` Q ${rightX} ${rightY}, ${base.x} ${base.y}`;
     }
+
 
     const midX = (p0.x + p1.x) / 2;
     const midY = (p0.y + p1.y) / 2;
