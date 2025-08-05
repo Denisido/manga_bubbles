@@ -2,4 +2,4 @@
 console.log("Простой тест на первое сохранение в репозитории")
 let a = 1
 let b = 2
-console.log(a + b + "Hey!") 
+console.log(a + b + 12) 
