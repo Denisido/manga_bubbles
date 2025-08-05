@@ -13,6 +13,16 @@ window.renderBubbles = async function (points) {
   for (const point of points) {
     const bubble = await createBubbleFromPoint(point);
     layer.add(bubble);
+
+    // 🔴 Добавим точку x/y как красную метку
+    const marker = new Konva.Circle({
+      x: 0,
+      y: 0,
+      radius: 3,
+      fill: 'red'
+    });
+
+    bubble.add(marker);
   }
 
   layer.draw();
@@ -41,22 +51,50 @@ async function createBubbleFromPoint(point) {
     dots.forEach(dot => group.add(dot));
   }
 
-  // Текст
-  const text = new Konva.Text({
-    x: -point.width / 2 + 10,
-    y: -10,
-    text: point.text,
-    fontSize: 14,
-    fontFamily: 'Arial',
-    width: point.width - 20,
-    align: 'center'
-  });
+  // 📦 Автоматический текст
+  const paddingX = point.width * 0.12;
+  const paddingY = point.height * 0.12;
 
-  group.add(text);
+  const maxWidth = point.width - paddingX * 2;
+  const maxHeight = point.height - paddingY * 2;
+
+  let fontSize = 28;
+  let fitted = false;
+  let tempText;
+
+  while (fontSize >= 10 && !fitted) {
+    tempText = new Konva.Text({
+      x: -point.width / 2 + paddingX,
+      y: -point.height / 2 + paddingY,
+      width: maxWidth,
+      text: point.text,
+      fontSize: fontSize,
+      fontFamily: 'Arial',
+      align: 'center',
+      verticalAlign: 'middle',
+      wrap: 'word',
+      lineHeight: 1.2
+    });
+
+    const actualHeight = tempText.getClientRect().height;
+
+    if (actualHeight <= maxHeight) {
+      fitted = true;
+    } else {
+      fontSize -= 1;
+    }
+  }
+
+  // Центрирование по вертикали вручную
+  const actualTextHeight = tempText.getClientRect().height;
+  const offsetY = (maxHeight - actualTextHeight) / 2;
+  tempText.y(tempText.y() + offsetY);
+
+  group.add(tempText);
   return group;
 }
 
-// Создание пути пузыря с плавным хвостиком
+// Хвост
 function createBubblePath(point) {
   const w = point.width;
   const h = point.height;
@@ -67,7 +105,6 @@ function createBubblePath(point) {
   const irregularity = point.irregularity ?? 0;
   const points = [];
 
-  // Генерация точек пузыря
   for (let i = 0; i < segments; i++) {
     const angle = (Math.PI * 2 * i) / segments;
     const radiusX = rX * (1 + (Math.random() - 0.5) * irregularity);
@@ -79,7 +116,6 @@ function createBubblePath(point) {
     });
   }
 
-  // Определяем угол хвостика
   let tailIndex = null;
   if (point.hasTail && point.style !== "thought") {
     const dx = point.anchorX - point.x;
@@ -103,36 +139,26 @@ function createBubblePath(point) {
       path += `M ${p0.x} ${p0.y}`;
     }
 
-    // Вставляем хвостик плавными кривыми
     if (tailIndex !== null && i === tailIndex) {
       const base = p0;
       const dx = point.anchorX - point.x;
       const dy = point.anchorY - point.y;
       const angle = Math.atan2(dy, dx);
 
-      // Шире основание хвоста
-      const spread = 0.6; // угол расширения
-      const length = 20;  // длина хвоста
+      const leftX = base.x + Math.cos(angle + 0.4) * 12;
+      const leftY = base.y + Math.sin(angle + 0.4) * 12;
+      const rightX = base.x + Math.cos(angle - 0.4) * 12;
+      const rightY = base.y + Math.sin(angle - 0.4) * 12;
 
-      const leftX = base.x + Math.cos(angle + spread) * 14;
-      const leftY = base.y + Math.sin(angle + spread) * 14;
-      const rightX = base.x + Math.cos(angle - spread) * 14;
-      const rightY = base.y + Math.sin(angle - spread) * 14;
+      const tipX = base.x + Math.cos(angle) * 30;
+      const tipY = base.y + Math.sin(angle) * 30;
 
-      // Более короткий кончик хвоста
-      const tipX = base.x + Math.cos(angle) * length;
-      const tipY = base.y + Math.sin(angle) * length;
-
-      // Плавная левая кривая
       path += ` Q ${leftX} ${leftY}, ${tipX} ${tipY}`;
-      // Плавная правая кривая
       path += ` Q ${rightX} ${rightY}, ${base.x} ${base.y}`;
     }
 
-
     const midX = (p0.x + p1.x) / 2;
     const midY = (p0.y + p1.y) / 2;
-
     path += ` Q ${p0.x} ${p0.y}, ${midX} ${midY}`;
   }
 
