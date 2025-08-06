@@ -58,7 +58,7 @@ async function createBubbleFromPoint(point) {
   const maxWidth = point.width - paddingX * 2;
   const maxHeight = point.height - paddingY * 2;
 
-  let fontSize = 28;
+  let fontSize = 60;
   let fitted = false;
   let tempText;
 
@@ -76,14 +76,17 @@ async function createBubbleFromPoint(point) {
       lineHeight: 1.2
     });
 
-    const actualHeight = tempText.getClientRect().height;
+    const actualRect = tempText.getClientRect();
+    const actualWidth = actualRect.width;
+    const actualHeight = actualRect.height;
 
-    if (actualHeight <= maxHeight) {
+    if (actualHeight <= maxHeight && actualWidth <= maxWidth) {
       fitted = true;
     } else {
       fontSize -= 1;
     }
   }
+
 
   // Центрирование по вертикали вручную
   const actualTextHeight = tempText.getClientRect().height;
