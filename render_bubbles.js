@@ -1,5 +1,56 @@
 window.renderReady = false;
 
+// ❗️Список плохих слов для переноса (не начинать с них строку)
+const BAD_START = [
+  'и', 'а', 'но', 'же', 'да', 'или', 'что', 'как', 'ну', 'то',
+  'по', 'не', 'на', 'за', 'от', 'со', 'из', 'у', 'во', 'ли', 'бы', 'же'
+];
+
+// Получить "визуальную" ширину строки через Konva.Text
+function getVisualWidth(text, fontSize = 36, fontFamily = 'Arial') {
+  const temp = new Konva.Text({
+    text,
+    fontSize,
+    fontFamily,
+    visible: false
+  });
+  return temp.getClientRect().width;
+}
+
+// Умный авто-перенос строки для коротких текстов (2+ слов)
+function smartVisualWrap(text, fontSize = 36, fontFamily = 'Arial') {
+  const words = text.split(' ');
+  if (words.length < 2) return text;
+
+  let bestSplit = 1;
+  let bestScore = Infinity;
+
+  for (let i = 1; i < words.length; i++) {
+    if (BAD_START.includes(words[i].toLowerCase())) continue;
+
+    const line1 = words.slice(0, i).join(' ');
+    const line2 = words.slice(i).join(' ');
+    const w1 = getVisualWidth(line1, fontSize, fontFamily);
+    const w2 = getVisualWidth(line2, fontSize, fontFamily);
+
+    const diff = Math.abs(w1 - w2);
+    const maxLen = Math.max(w1, w2);
+    const minLen = Math.min(w1, w2);
+    const balancePenalty = (minLen / maxLen < 0.6) ? 999 : 0;
+    const centerPenalty = Math.abs(i - words.length / 2) * 2;
+
+    const score = diff + balancePenalty + centerPenalty;
+    if (score < bestScore) {
+      bestScore = score;
+      bestSplit = i;
+    }
+  }
+
+  if (bestScore === Infinity) return text;
+
+  return words.slice(0, bestSplit).join(' ') + '\n' + words.slice(bestSplit).join(' ');
+}
+
 window.renderBubbles = async function (points) {
   const stage = new Konva.Stage({
     container: 'container',
@@ -14,7 +65,7 @@ window.renderBubbles = async function (points) {
     const bubble = await createBubbleFromPoint(point);
     layer.add(bubble);
 
-    // 🔴 Добавим точку x/y как красную метку
+    // 🔴 Маркер центра пузыря
     const marker = new Konva.Circle({
       x: 0,
       y: 0,
@@ -29,7 +80,7 @@ window.renderBubbles = async function (points) {
   window.renderReady = true;
 };
 
-// Создание пузыря
+// Основная функция создания пузыря
 async function createBubbleFromPoint(point) {
   const group = new Konva.Group({ x: point.x, y: point.y });
 
@@ -45,29 +96,41 @@ async function createBubbleFromPoint(point) {
 
   group.add(bubble);
 
-  // Точки для мыслей
+  // Мысленные точки
   if (point.style === 'thought' && point.hasTail) {
     const dots = createThoughtDots(point);
     dots.forEach(dot => group.add(dot));
   }
 
-  // 📦 Автоматический текст
+  // --- 📦 Умная авторазбивка и подбор размера текста ---
   const paddingX = point.width * 0.12;
   const paddingY = point.height * 0.12;
 
   const maxWidth = point.width - paddingX * 2;
   const maxHeight = point.height - paddingY * 2;
 
-  let fontSize = 60;
+  // Для старта fontSize — пусть будет 0.8 от меньшей стороны блока (можно играть с этим коэффициентом!)
+  let fontSize = Math.floor(Math.min(point.width, point.height) * 0.8);
   let fitted = false;
   let tempText;
+  let renderText = point.text;
 
   while (fontSize >= 10 && !fitted) {
+    // Для очень коротких однострочных текстов делаем умный перенос!
+    if (
+      renderText.split('\n').length === 1 &&
+      renderText.split(' ').length >= 2
+    ) {
+      renderText = smartVisualWrap(point.text, fontSize, 'Arial');
+    } else {
+      renderText = point.text;
+    }
+
     tempText = new Konva.Text({
       x: -point.width / 2 + paddingX,
       y: -point.height / 2 + paddingY,
       width: maxWidth,
-      text: point.text,
+      text: renderText,
       fontSize: fontSize,
       fontFamily: 'Arial',
       align: 'center',
@@ -86,7 +149,6 @@ async function createBubbleFromPoint(point) {
       fontSize -= 1;
     }
   }
-
 
   // Центрирование по вертикали вручную
   const actualTextHeight = tempText.getClientRect().height;
@@ -173,7 +235,7 @@ function normalizeAngle(angle) {
   return ((angle + Math.PI * 2) % (Math.PI * 2));
 }
 
-// Точки для мыслей
+// Точки для мысленного пузыря
 function createThoughtDots(point) {
   const dx = point.anchorX - point.x;
   const dy = point.anchorY - point.y;
