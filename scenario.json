@@ -1,0 +1,85 @@
+[
+    {
+        "scenario": {
+            "frame": 1,
+            "x": 0,
+            "y": 0,
+            "width": 510,
+            "height": 510,
+            "text": "",
+            "description": "Здесь описываем сценарий для первого кадра! Что происходит в кадре (фон, персонажи, действия, выражения лиц, обстановка)"
+        },
+        "speechBubble": [
+            {
+                "id": "bubble1",
+                "x": 100,
+                "y": 100,
+                "width": 210,
+                "height": 130,
+                "text": "Привет! Как дела?",
+                "style": "shout",
+                "anchorX": 80,
+                "anchorY": 20,
+                "hasTail": true,
+                "bubbleColor": "#fff",
+                "borderColor": "#222",
+                "irregularity": 0.35
+            },
+            {
+                "id": "bubble2",
+                "x": 350,
+                "y": 300,
+                "width": 180,
+                "height": 90,
+                "text": "Хмм... может быть, это не так уж и плохо...",
+                "style": "dialog",
+                "anchorX": 450,
+                "anchorY": 400,
+                "hasTail": true,
+                "bubbleColor": "#fff",
+                "borderColor": "#222",
+                "irregularity": 0.5
+            }
+        ]
+    },
+    {
+        "scenario": {
+            "frame": 2,
+            "x": 514,
+            "y": 0,
+            "width": 510,
+            "height": 510,
+            "text": "",
+            "description": "Здесь подробно описываем сценарий для второго кадра! Что происходит в кадре (фон, персонажи, действия, выражения лиц, обстановка)"
+        },
+        "speechBubble": [
+            {
+                "id": "bubble2",
+                "x": 400,
+                "y": 150,
+                "width": 120,
+                "height": 120,
+                "text": "ЭЙ! СЮДА СМОТРИ!",
+                "style": "shout",
+                "anchorX": 50,
+                "anchorY": 40,
+                "hasTail": true,
+                "bubbleColor": "#fff",
+                "borderColor": "#222",
+                "irregularity": 0.25
+            }
+        ]
+    },
+    {
+        "scenario": {
+            "frame": 3,
+            "x": 0,
+            "y": 514,
+            "width": 510,
+            "height": 510,
+            "text": "",
+            "description": "Здесь описываем сценарий подробно для третьего кадра! Что происходит в кадре (фон, персонажи, действия, выражения лиц, обстановка)"
+        },
+        "speechBubble": null
+    }
+]

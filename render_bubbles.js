@@ -51,7 +51,7 @@ function smartVisualWrap(text, fontSize = 36, fontFamily = 'Arial') {
   return words.slice(0, bestSplit).join(' ') + '\n' + words.slice(bestSplit).join(' ');
 }
 
-window.renderBubbles = async function (points) {
+window.renderBubbles = async function (scenarios) {
   const stage = new Konva.Stage({
     container: 'container',
     width: 1024,
@@ -61,19 +61,37 @@ window.renderBubbles = async function (points) {
   const layer = new Konva.Layer();
   stage.add(layer);
 
-  for (const point of points) {
-    const bubble = await createBubbleFromPoint(point);
-    layer.add(bubble);
+  // Перебираем все кадры (scenarios)
+  for (const scene of scenarios) {
+    const frame = scene.scenario;
+    const bubbles = scene.speechBubble;
 
-    // 🔴 Маркер центра пузыря
-    const marker = new Konva.Circle({
-      x: 0,
-      y: 0,
-      radius: 3,
-      fill: 'red'
-    });
+    if (!bubbles || !Array.isArray(bubbles)) continue; // нет пузырей в кадре
 
-    bubble.add(marker);
+    for (const bubble of bubbles) {
+      // переводим локальные координаты пузыря в глобальные
+      const globalBubble = { ...bubble };
+      globalBubble.x = frame.x + bubble.x;
+      globalBubble.y = frame.y + bubble.y;
+
+      // anchorX/Y — тоже переводим (но только если hasTail)
+      if (bubble.hasTail) {
+        globalBubble.anchorX = frame.x + bubble.anchorX;
+        globalBubble.anchorY = frame.y + bubble.anchorY;
+      }
+
+      const bubbleGroup = await createBubbleFromPoint(globalBubble);
+      layer.add(bubbleGroup);
+
+      // 🔴 Маркер центра пузыря (для отладки, можно убрать)
+      const marker = new Konva.Circle({
+        x: 0,
+        y: 0,
+        radius: 3,
+        fill: 'red'
+      });
+      bubbleGroup.add(marker);
+    }
   }
 
   layer.draw();
