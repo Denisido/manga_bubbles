@@ -1,0 +1,31 @@
+#   Выполни команду:
+#   & "C:\Program Files\7-Zip\7z.exe" a -tzip project.zip * "-x!node_modules\*" "-x!.git\*" "-x!.env" "-x!*.log"
+#
+#   project.zip — имя архива.
+#   * — добавить всё из текущей папки.
+#   -xr!node_modules — рекурсивно исключить node_modules.
+#   -xr!.git — исключить .git.
+#   -xr!.env — исключить .env.
+#   -xr!*.log — исключить все .log файлы.
+
+
+# Исключаем папку node_modules
+node_modules/
+.env
+.git/
+
+# Логи
+*.log
+npm-debug.log
+
+# Временные/системные файлы
+.DS_Store
+
+# Папки IDE
+.idea/
+.vscode/
+
+# Архивы и результаты сборки
+coverage/
+dist/
+*.zip

@@ -1,4 +1,54 @@
+console.log("RENDER_BUBBLES.JS LOADED!");
+
 window.renderReady = false;
+
+// --- Получение query-параметров ---
+function getQueryParams() {
+  const params = {};
+  window.location.search.replace(/[?&]+([^=&]+)=([^&]*)/gi, function(str, key, value) {
+    params[key] = decodeURIComponent(value);
+  });
+  return params;
+}
+
+// --- Определение режима работы ---
+const params = getQueryParams();
+const MODE = window.trialMode || params.mode || 'main';
+
+// --- Определение путей и сценария в зависимости от режима ---
+let bgImagePath, scenarioPromise;
+
+
+console.log("LOADED render_bubbles.js!");
+console.log("MODE:", MODE, "trialScenario:", !!window.trialScenario, "params.scenario:", params.scenario);
+if (window.trialScenario) {
+  console.log("trialScenario (short):", Array.isArray(window.trialScenario), window.trialScenario.length);
+}
+// === Режим для экспериментов ===
+if (MODE === 'trial') {
+  bgImagePath = window.trialBg || params.bg || '/static/blank_1024.png';
+
+  if (window.trialScenario) {
+    scenarioPromise = Promise.resolve(window.trialScenario);
+  } else {
+    // fetch не будет работать! Можно кинуть ошибку или показать предупреждение
+    console.log("В режиме trial сценарий должен быть передан через window.trialScenario (fetch не поддерживается в file://)");
+    throw new Error("trialScenario not provided in window");
+  }
+}
+// === Основной режим ===
+else {
+  bgImagePath = '/static/blank_1024.png'; // можно заменить на боевой фон
+  scenarioPromise = fetch('/data/scenario.json').then(r => r.json());
+}
+
+
+console.log("=== MODE:", MODE, "trialScenario:", !!window.trialScenario, "params.scenario:", params.scenario);
+
+// --- Основная точка входа ---
+// scenarioPromise.then((scenarios) => {
+//   renderBubbles(scenarios);
+// });
 
 // ❗️Список плохих слов для переноса (не начинать с них строку)
 const BAD_START = [
@@ -52,6 +102,14 @@ function smartVisualWrap(text, fontSize = 36, fontFamily = 'Arial') {
 }
 
 window.renderBubbles = async function (scenarios) {
+  console.log("renderBubbles called, scenarios:", scenarios);
+console.log("typeof scenarios:", typeof scenarios, "isArray:", Array.isArray(scenarios), "length:", scenarios.length);
+
+for (const scene of scenarios) {
+  console.log("scene:", scene, "type:", typeof scene);
+}
+
+
   const stage = new Konva.Stage({
     container: 'container',
     width: 1024,
@@ -60,6 +118,16 @@ window.renderBubbles = async function (scenarios) {
 
   const layer = new Konva.Layer();
   stage.add(layer);
+
+  // --- Добавим фон ---
+  const bgImg = new window.Image();
+  bgImg.src = bgImagePath;
+  await new Promise((resolve) => { bgImg.onload = resolve; });
+  const bg = new Konva.Image({
+    image: bgImg,
+    x: 0, y: 0, width: 1024, height: 1024
+  });
+  layer.add(bg);
 
   // Перебираем все кадры (scenarios)
   for (const scene of scenarios) {
@@ -83,18 +151,21 @@ window.renderBubbles = async function (scenarios) {
       const bubbleGroup = await createBubbleFromPoint(globalBubble);
       layer.add(bubbleGroup);
 
-      // 🔴 Маркер центра пузыря (для отладки, можно убрать)
-      const marker = new Konva.Circle({
-        x: 0,
-        y: 0,
-        radius: 3,
-        fill: 'red'
-      });
-      bubbleGroup.add(marker);
+      // 🔴 Маркер центра пузыря (для триального режима)
+      if (MODE === 'trial') {
+        const marker = new Konva.Circle({
+          x: 0,
+          y: 0,
+          radius: 3,
+          fill: 'red'
+        });
+        bubbleGroup.add(marker);
+      }
     }
   }
 
   layer.draw();
+  console.log("CALL renderReady! scenarios:", scenarios);
   window.renderReady = true;
 };
 
