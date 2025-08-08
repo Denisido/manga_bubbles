@@ -18,7 +18,6 @@ const MODE = window.trialMode || params.mode || 'main';
 // --- Определение путей и сценария в зависимости от режима ---
 let bgImagePath, scenarioPromise;
 
-
 console.log("LOADED render_bubbles.js!");
 console.log("MODE:", MODE, "trialScenario:", !!window.trialScenario, "params.scenario:", params.scenario);
 if (window.trialScenario) {
@@ -42,13 +41,7 @@ else {
   scenarioPromise = fetch('/data/scenario.json').then(r => r.json());
 }
 
-
 console.log("=== MODE:", MODE, "trialScenario:", !!window.trialScenario, "params.scenario:", params.scenario);
-
-// --- Основная точка входа ---
-// scenarioPromise.then((scenarios) => {
-//   renderBubbles(scenarios);
-// });
 
 // ❗️Список плохих слов для переноса (не начинать с них строку)
 const BAD_START = [
@@ -56,7 +49,6 @@ const BAD_START = [
   'по', 'не', 'на', 'за', 'от', 'со', 'из', 'у', 'во', 'ли', 'бы', 'же'
 ];
 
-// Получить "визуальную" ширину строки через Konva.Text
 function getVisualWidth(text, fontSize = 36, fontFamily = 'Arial') {
   const temp = new Konva.Text({
     text,
@@ -67,7 +59,6 @@ function getVisualWidth(text, fontSize = 36, fontFamily = 'Arial') {
   return temp.getClientRect().width;
 }
 
-// Умный авто-перенос строки для коротких текстов (2+ слов)
 function smartVisualWrap(text, fontSize = 36, fontFamily = 'Arial') {
   const words = text.split(' ');
   if (words.length < 2) return text;
@@ -101,14 +92,67 @@ function smartVisualWrap(text, fontSize = 36, fontFamily = 'Arial') {
   return words.slice(0, bestSplit).join(' ') + '\n' + words.slice(bestSplit).join(' ');
 }
 
-window.renderBubbles = async function (scenarios) {
-  console.log("renderBubbles called, scenarios:", scenarios);
-console.log("typeof scenarios:", typeof scenarios, "isArray:", Array.isArray(scenarios), "length:", scenarios.length);
 
-for (const scene of scenarios) {
-  console.log("scene:", scene, "type:", typeof scene);
+// Ф-ция валидации сценария (корректное проставление координат пузырей)
+const AUTO_FIX_BUBBLES = true; // <-- меняй на true если хочешь автофиксы!
+
+function validateBubbles(scenarios) {
+  scenarios.forEach((scene, frameIdx) => {
+    const frame = scene.scenario;
+    const bubbles = scene.speechBubble;
+    if (!bubbles || !Array.isArray(bubbles)) return;
+
+    bubbles.forEach((bubble, bubbleIdx) => {
+      // Преобразуем координаты в глобальные
+      const globalX = frame.x + bubble.x;
+      const globalY = frame.y + bubble.y;
+      const width = bubble.width || 0;
+      const height = bubble.height || 0;
+
+      // Проверяем, помещается ли пузырь целиком в свой кадр
+      const left = globalX - width / 2;
+      const right = globalX + width / 2;
+      const top = globalY - height / 2;
+      const bottom = globalY + height / 2;
+
+      const fits =
+        left >= frame.x &&
+        right <= frame.x + frame.width &&
+        top >= frame.y &&
+        bottom <= frame.y + frame.height;
+
+      if (!fits) {
+        console.warn(
+          `⚠️ Пузырь ${bubbleIdx + 1} кадра ${frameIdx + 1} выходит за границы кадра!\n` +
+          `globalX: ${globalX} [${left} ... ${right}] — frame.x: ${frame.x} ... ${frame.x + frame.width}\n` +
+          `globalY: ${globalY} [${top} ... ${bottom}] — frame.y: ${frame.y} ... ${frame.y + frame.height}\n`
+        );
+        if (AUTO_FIX_BUBBLES) {
+          // Исправляем координаты на максимально допустимые
+          const fixedX = Math.min(Math.max(globalX, frame.x + width/2), frame.x + frame.width - width/2);
+          const fixedY = Math.min(Math.max(globalY, frame.y + height/2), frame.y + frame.height - height/2);
+
+          // Возвращаем координаты обратно в ЛОКАЛЬНУЮ систему пузыря
+          bubble.x = fixedX - frame.x;
+          bubble.y = fixedY - frame.y;
+
+          console.log(
+            `✅ bubble ${bubbleIdx + 1} frame ${frameIdx + 1} автоисправлен на x:${bubble.x}, y:${bubble.y}`
+          );
+        }
+      }
+    });
+  });
 }
 
+
+
+
+
+
+window.renderBubbles = async function (scenarios) {
+  // Валидация координат пузырей для каждого кадра
+  validateBubbles(scenarios);
 
   const stage = new Konva.Stage({
     container: 'container',
@@ -130,13 +174,36 @@ for (const scene of scenarios) {
   layer.add(bg);
 
   // Перебираем все кадры (scenarios)
-  for (const scene of scenarios) {
+  scenarios.forEach((scene, frameIdx) => {
     const frame = scene.scenario;
     const bubbles = scene.speechBubble;
 
-    if (!bubbles || !Array.isArray(bubbles)) continue; // нет пузырей в кадре
+    // === Обрисовка фрейма (кадра) ===
+    if (frame) {
+      layer.add(new Konva.Rect({
+        x: frame.x,
+        y: frame.y,
+        width: frame.width,
+        height: frame.height,
+        stroke: 'rgba(100,0,255,0.7)',
+        strokeWidth: 2,
+        dash: [8, 4]
+      }));
 
-    for (const bubble of bubbles) {
+      // Подпись номера кадра
+      layer.add(new Konva.Text({
+        x: frame.x + 8,
+        y: frame.y + 8,
+        text: `Кадр ${frameIdx + 1}`,
+        fontSize: 22,
+        fill: '#4700fa',
+        fontStyle: 'bold'
+      }));
+    }
+
+    if (!bubbles || !Array.isArray(bubbles)) return;
+
+    bubbles.forEach((bubble, bubbleIdx) => {
       // переводим локальные координаты пузыря в глобальные
       const globalBubble = { ...bubble };
       globalBubble.x = frame.x + bubble.x;
@@ -148,26 +215,44 @@ for (const scene of scenarios) {
         globalBubble.anchorY = frame.y + bubble.anchorY;
       }
 
-      const bubbleGroup = await createBubbleFromPoint(globalBubble);
-      layer.add(bubbleGroup);
+      createBubbleFromPoint(globalBubble).then(bubbleGroup => {
+        layer.add(bubbleGroup);
 
-      // 🔴 Маркер центра пузыря (для триального режима)
-      if (MODE === 'trial') {
-        const marker = new Konva.Circle({
-          x: 0,
-          y: 0,
-          radius: 3,
-          fill: 'red'
-        });
-        bubbleGroup.add(marker);
-      }
-    }
-  }
+        // 🔴 Маркер центра пузыря (для триального режима)
+        if (MODE === 'trial') {
+          const marker = new Konva.Circle({
+            x: 0,
+            y: 0,
+            radius: 3,
+            fill: 'red'
+          });
+          bubbleGroup.add(marker);
+        }
+
+        // === Подпись к пузырю ===
+        layer.add(new Konva.Text({
+          x: globalBubble.x - globalBubble.width / 2,
+          y: globalBubble.y + globalBubble.height / 2 + 6,
+          text: `Пузырь ${bubbleIdx + 1}\n(x:${Math.round(globalBubble.x)}, y:${Math.round(globalBubble.y)})`,
+          fontSize: 16,
+          fill: '#c50',
+          fontStyle: 'italic'
+        }));
+      });
+    });
+  });
+
+  // Дожидаемся всех асинхронных пузырей
+  await new Promise(r => setTimeout(r, 120)); // на всякий случай!
 
   layer.draw();
   console.log("CALL renderReady! scenarios:", scenarios);
   window.renderReady = true;
 };
+
+// ... всё остальное без изменений ...
+// (функции createBubbleFromPoint, createBubblePath, createThoughtDots и т.д.)
+
 
 // Основная функция создания пузыря
 async function createBubbleFromPoint(point) {
